@@ -11,10 +11,9 @@ import xmltodict
 
 
 os.environ['PATH'] = os.pathsep.join(['.', os.environ['PATH']])
-for binary in ('idevicediagnostics', 'igetnonce'):
-    if not shutil.which(binary):
-        print(f'[-] ERROR: {binary} not found. Please place the binary in the same folder as the script and try again.')
-        sys.exit(1)
+if not shutil.which('idevicediagnostics'):
+    print('[-] ERROR: idevicediagnostics not found. Please place the binary in your PATH or the same folder as the script and try again.')
+    sys.exit(1)
 
 
 def wait_for_device():
