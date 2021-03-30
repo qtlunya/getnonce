@@ -144,6 +144,8 @@ if __name__ == '__main__':
     # Reset and read it again to make sure the generator was set properly.
     print('Sending reset command')
     run_process('irecovery', '-c', 'reset')
+    # Wait a bit, otherwise it thinks the device is already in recovery, tries to get nonce, device reboots, gets N/A
+    time.sleep(5)
     apnonce = get_recovery_apnonce(apnonce)
 
     # Return to normal mode and get the generator.
