@@ -120,10 +120,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # If the device is not jailbroken, get the ApNonce in normal mode, which will set a new random generator.
-    wait_for_device(mode='normal')
     if jailbroken:
         apnonce = None
     else:
+        wait_for_device(mode='normal')
         apnonce = mobilegestalt_read_bytes('ApNonce', 'big')
         if apnonce:
             apnonce = pad_apnonce(apnonce)
@@ -133,12 +133,14 @@ if __name__ == '__main__':
             sys.exit(1)
 
     # Read the ApNonce in recovery mode to confirm it matches.
-    print('Entering recovery mode')
-    udid = run_process('idevice_id', '-l')
-    if not udid:
-        print(colored('ERROR: Unable to find device', 'red'))
-        sys.exit(1)
-    run_process('ideviceenterrecovery', udid)
+    # Only try and enter recovery if it's not already in recovery
+    if not run_process('irecovery', '-m', silence_errors=True) == 'Recovery Mode':
+        print('Entering recovery mode')
+        udid = run_process('idevice_id', '-l')
+        if not udid:
+            print(colored('ERROR: Unable to find device', 'red'))
+            sys.exit(1)
+        run_process('ideviceenterrecovery', udid)
     apnonce = get_recovery_apnonce(apnonce)
 
     # Reset and read it again to make sure the generator was set properly.
