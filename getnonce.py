@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     # Read the ApNonce in recovery mode to confirm it matches.
     # Only try and enter recovery if it's not already in recovery
-    if not run_process('irecovery', '-m', silence_errors=True) == 'Recovery Mode':
+    if run_process('irecovery', '-m', silence_errors=True) != 'Recovery Mode':
         print('Entering recovery mode')
         udid = run_process('idevice_id', '-l')
         if not udid:
