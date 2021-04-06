@@ -59,7 +59,9 @@ def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
 
 
 def pad_apnonce(apnonce: str) -> str:
-    padded = apnonce.zfill(16)
+    """Pad an ApNonce to 64 characters (A10 and above) or 40 characters (A9 and below)."""
+
+    padded = apnonce.zfill(64)
 
     if padded[0:24] == '000000000000000000000000':
         return padded[24:]
