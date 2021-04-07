@@ -12,10 +12,13 @@ import xmltodict
 from termcolor import colored
 
 
-def run_process(command: str, *args: str, silence_errors: bool = False) -> Optional[str]:
+def run_process(command: str, *args: str, silence_errors: bool = False, timeout: Optional[int] = None) -> Optional[str]:
     """Run a command with the specified arguments."""
 
-    p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8')
+    try:
+        p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None
 
     if p.returncode != 0:
         if silence_errors:
@@ -89,7 +92,7 @@ def get_recovery_apnonce(old_apnonce) -> str:
             break
 
     if apnonce:
-        print(colored(f'ApNonce = {apnonce}', 'green'))
+        print(colored(f"ApNonce = {colored(apnonce, attrs=['bold'])}", 'green'))
     else:
         print(colored('ERROR: Unable to read ApNonce', 'red'))
         sys.exit(1)
@@ -121,44 +124,55 @@ if __name__ == '__main__':
         print(colored('ERROR: Invalid input', 'red'))
         sys.exit(1)
 
+    # If the device is in recovery mode, exit it.
+    print(colored('\n[1/4] Checking device state', attrs=['bold']))
+    if run_process('irecovery', '-m', silence_errors=True, timeout=1) == 'Recovery Mode':
+        print('Exiting recovery mode')
+        run_process('irecovery', '-n')
+    wait_for_device(mode='normal')
+
     # If the device is not jailbroken, get the ApNonce in normal mode, which will set a new random generator.
+    print(colored('\n[2/4] Getting ApNonce', attrs=['bold']))
     if jailbroken:
+        print('Skipping on jailbroken device')
         apnonce = None
     else:
-        wait_for_device(mode='normal')
         apnonce = mobilegestalt_read_bytes('ApNonce', 'big')
         if apnonce:
             apnonce = pad_apnonce(apnonce)
-            print(colored(f'ApNonce = {apnonce}', 'green'))
+            print(colored(f"ApNonce = {colored(apnonce, attrs=['bold'])}", 'green'))
         else:
             print(colored('ERROR: Unable to read ApNonce', 'red'))
             sys.exit(1)
 
+    # Reboot the device to make sure we get an up to date generator value, then read it out.
+    print(colored('\n[3/4] Getting generator', attrs=['bold']))
+    print('Rebooting device')
+    run_process('idevicediagnostics', 'restart')
+    wait_for_device(mode='normal')
+    generator = mobilegestalt_read_bytes('BootNonce', 'little')
+    if generator:
+        print(colored(f"Generator = {colored('0x' + generator.zfill(16), attrs=['bold'])}", 'green'))
+    else:
+        print(colored('ERROR: Unable to read generator', 'red'))
+        sys.exit(1)
+
     # Read the ApNonce in recovery mode to confirm it matches.
-    # Only try and enter recovery if it's not already in recovery
-    if run_process('irecovery', '-m', silence_errors=True) != 'Recovery Mode':
-        print('Entering recovery mode')
-        udid = run_process('idevice_id', '-l')
-        if not udid:
-            print(colored('ERROR: Unable to find device', 'red'))
-            sys.exit(1)
-        run_process('ideviceenterrecovery', udid)
+    print(colored('\n[4/4] Verifying ApNonce', attrs=['bold']))
+    print('Entering recovery mode')
+    udid = run_process('idevice_id', '-l')
+    if not udid:
+        print(colored('ERROR: Unable to find device', 'red'))
+        sys.exit(1)
+    run_process('ideviceenterrecovery', udid)
     apnonce = get_recovery_apnonce(apnonce)
 
     # Reset and read it again to make sure the generator was set properly.
     print('Sending reset command')
     run_process('irecovery', '-c', 'reset')
-    # Wait a bit, otherwise it thinks the device is already in recovery, tries to get nonce, device reboots, gets N/A
-    time.sleep(5)
+    time.sleep(5)  # A delay is needed here to make sure it doesn't catch the device before it started exiting recovery
     apnonce = get_recovery_apnonce(apnonce)
 
-    # Return to normal mode and get the generator.
+    # Return to normal mode.
     print('Exiting recovery mode')
     run_process('irecovery', '-n')
-    wait_for_device(mode='normal')
-    generator = mobilegestalt_read_bytes('BootNonce', 'little')
-    if generator:
-        print(colored(f'Generator = 0x{generator.zfill(16)}', 'green'))
-    else:
-        print(colored('ERROR: Unable to read generator', 'red'))
-        sys.exit(1)
