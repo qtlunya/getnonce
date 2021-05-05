@@ -2,13 +2,13 @@
 
 import base64
 import os
+import plistlib
 import shutil
 import subprocess
 import time
 import sys
 from typing import Optional
 
-import xmltodict
 from termcolor import colored
 
 
@@ -51,10 +51,10 @@ def wait_for_device(mode: str) -> None:
 def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
     """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
 
-    xml = xmltodict.parse(run_process('idevicediagnostics', 'mobilegestalt', key))
+    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
 
     try:
-        value = base64.b64decode(xml['plist']['dict']['dict']['data'])
+        value = plist['MobileGestalt'][key]
     except KeyError:
         return None
     else:
