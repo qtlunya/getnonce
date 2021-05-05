@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import atexit
 import base64
 import os
 import plistlib
+import signal
 import shutil
 import subprocess
 import time
@@ -15,10 +17,17 @@ except ModuleNotFoundError:
     def colored(text, *args, **kwargs):
         return text
 
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
+@atexit.register
+def finish():
+    print('\nPress Enter to exit.')
+    input()
+
 
 def run_process(command: str, *args: str, silence_errors: bool = False, timeout: Optional[int] = None) -> Optional[str]:
     """Run a command with the specified arguments."""
-
     try:
         p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -197,3 +206,6 @@ if __name__ == '__main__':
     # Return to normal mode.
     print('Exiting recovery mode')
     run_process('irecovery', '-n')
+
+    print(colored('\nAll done! You can go to https://tsssaver.1conan.com/v2/ to save blobs.', attrs=['bold']))
+    print('Make sure to specify the ECID, ApNonce and Generator values you got above.')
