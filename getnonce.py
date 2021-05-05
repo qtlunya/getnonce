@@ -189,7 +189,7 @@ if __name__ == '__main__':
     apnonce = get_recovery_apnonce(apnonce)
 
     # Reset and read it again to make sure the generator was set properly.
-    print('Sending reset command')
+    print('Rebooting device')
     run_process('irecovery', '-c', 'reset')
     time.sleep(5)  # A delay is needed here to make sure it doesn't catch the device before it started exiting recovery
     apnonce = get_recovery_apnonce(apnonce)
