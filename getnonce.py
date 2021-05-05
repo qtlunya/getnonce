@@ -9,7 +9,11 @@ import time
 import sys
 from typing import Optional
 
-from termcolor import colored
+try:
+    from termcolor import colored
+except ModuleNotFoundError:
+    def colored(text, *args, **kwargs):
+        return text
 
 
 def run_process(command: str, *args: str, silence_errors: bool = False, timeout: Optional[int] = None) -> Optional[str]:
