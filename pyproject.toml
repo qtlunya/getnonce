@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "getnonce"
+version = "0.1.0"
+description = "Get an apnonce/generator pair from any arm64/arm64e iDevice. No jailbreak required."
+authors = ["nyuszika7h <nyuszika7h@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+termcolor = "^1.1.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
