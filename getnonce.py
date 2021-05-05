@@ -52,6 +52,19 @@ def wait_for_device(mode: str) -> None:
     print()
 
 
+def mobilegestalt_read_int(key: str) -> Optional[str]:
+    """Read an integer from MobileGestalt and return it as a hex string."""
+
+    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
+
+    try:
+        value = plist['MobileGestalt'][key]
+    except KeyError:
+        return None
+    else:
+        return '{:X}'.format(value)
+
+
 def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
     """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
 
@@ -129,14 +142,18 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # If the device is in recovery mode, exit it.
-    print(colored('\n[1/4] Checking device state', attrs=['bold']))
+    print(colored('\n[1/5] Checking device state', attrs=['bold']))
     if run_process('irecovery', '-m', silence_errors=True, timeout=1) == 'Recovery Mode':
         print('Exiting recovery mode')
         run_process('irecovery', '-n')
     wait_for_device(mode='normal')
 
+    print(colored('\n[2/5] Getting ECID', attrs=['bold']))
+    ecid = mobilegestalt_read_int('UniqueChipID')
+    print(colored(f"ECID (hex) = {colored(ecid, attrs=['bold'])}", 'green'))
+
     # If the device is not jailbroken, get the ApNonce in normal mode, which will set a new random generator.
-    print(colored('\n[2/4] Getting ApNonce', attrs=['bold']))
+    print(colored('\n[3/5] Getting ApNonce', attrs=['bold']))
     if jailbroken:
         print('Skipping on jailbroken device')
         apnonce = None
@@ -150,7 +167,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
     # Reboot the device to make sure we get an up to date generator value, then read it out.
-    print(colored('\n[3/4] Getting generator', attrs=['bold']))
+    print(colored('\n[4/5] Getting generator', attrs=['bold']))
     print('Rebooting device')
     run_process('idevicediagnostics', 'restart')
     wait_for_device(mode='normal')
@@ -162,7 +179,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Read the ApNonce in recovery mode to confirm it matches.
-    print(colored('\n[4/4] Verifying ApNonce', attrs=['bold']))
+    print(colored('\n[5/5] Verifying ApNonce', attrs=['bold']))
     print('Entering recovery mode')
     udid = run_process('idevice_id', '-l')
     if not udid:
