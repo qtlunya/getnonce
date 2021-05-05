@@ -4,11 +4,11 @@ import atexit
 import base64
 import os
 import plistlib
-import signal
 import shutil
+import signal
 import subprocess
-import time
 import sys
+import time
 from typing import Optional
 
 try:
