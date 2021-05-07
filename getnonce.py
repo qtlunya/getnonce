@@ -1,20 +1,33 @@
 #!/usr/bin/env python3
 
+import atexit
 import base64
 import os
+import plistlib
 import shutil
+import signal
 import subprocess
-import time
 import sys
+import time
 from typing import Optional
 
-import xmltodict
-from termcolor import colored
+try:
+    from termcolor import colored
+except ModuleNotFoundError:
+    def colored(text, *args, **kwargs):
+        return text
+
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
+@atexit.register
+def finish():
+    print('\nPress Enter to exit.')
+    input()
 
 
 def run_process(command: str, *args: str, silence_errors: bool = False, timeout: Optional[int] = None) -> Optional[str]:
     """Run a command with the specified arguments."""
-
     try:
         p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -48,13 +61,26 @@ def wait_for_device(mode: str) -> None:
     print()
 
 
+def mobilegestalt_read_int(key: str) -> Optional[str]:
+    """Read an integer from MobileGestalt and return it as a hex string."""
+
+    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
+
+    try:
+        value = plist['MobileGestalt'][key]
+    except KeyError:
+        return None
+    else:
+        return '{:X}'.format(value)
+
+
 def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
     """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
 
-    xml = xmltodict.parse(run_process('idevicediagnostics', 'mobilegestalt', key))
+    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
 
     try:
-        value = base64.b64decode(xml['plist']['dict']['dict']['data'])
+        value = plist['MobileGestalt'][key]
     except KeyError:
         return None
     else:
@@ -125,14 +151,18 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # If the device is in recovery mode, exit it.
-    print(colored('\n[1/4] Checking device state', attrs=['bold']))
+    print(colored('\n[1/5] Checking device state', attrs=['bold']))
     if run_process('irecovery', '-m', silence_errors=True, timeout=1) == 'Recovery Mode':
         print('Exiting recovery mode')
         run_process('irecovery', '-n')
     wait_for_device(mode='normal')
 
+    print(colored('\n[2/5] Getting ECID', attrs=['bold']))
+    ecid = mobilegestalt_read_int('UniqueChipID')
+    print(colored(f"ECID (hex) = {colored(ecid, attrs=['bold'])}", 'green'))
+
     # If the device is not jailbroken, get the ApNonce in normal mode, which will set a new random generator.
-    print(colored('\n[2/4] Getting ApNonce', attrs=['bold']))
+    print(colored('\n[3/5] Getting ApNonce', attrs=['bold']))
     if jailbroken:
         print('Skipping on jailbroken device')
         apnonce = None
@@ -145,7 +175,6 @@ if __name__ == '__main__':
             print(colored('ERROR: Unable to read ApNonce', 'red'))
             sys.exit(1)
 
-    # Reboot the device to make sure we get an up to date generator value, then read it out.
     print(colored('\n[3/4] Getting generator', attrs=['bold']))
     generator = mobilegestalt_read_bytes('ApNonceRetrieve', 'little')
     if generator:
@@ -155,7 +184,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Read the ApNonce in recovery mode to confirm it matches.
-    print(colored('\n[4/4] Verifying ApNonce', attrs=['bold']))
+    print(colored('\n[5/5] Verifying ApNonce', attrs=['bold']))
     print('Entering recovery mode')
     udid = run_process('idevice_id', '-l')
     if not udid:
@@ -165,7 +194,7 @@ if __name__ == '__main__':
     apnonce = get_recovery_apnonce(apnonce)
 
     # Reset and read it again to make sure the generator was set properly.
-    print('Sending reset command')
+    print('Rebooting device')
     run_process('irecovery', '-c', 'reset')
     time.sleep(5)  # A delay is needed here to make sure it doesn't catch the device before it started exiting recovery
     apnonce = get_recovery_apnonce(apnonce)
@@ -173,3 +202,6 @@ if __name__ == '__main__':
     # Return to normal mode.
     print('Exiting recovery mode')
     run_process('irecovery', '-n')
+
+    print(colored('\nAll done! You can go to https://tsssaver.1conan.com/v2/ to save blobs.', attrs=['bold']))
+    print('Make sure to specify the ECID, ApNonce and Generator values you got above.')
