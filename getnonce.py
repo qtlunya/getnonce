@@ -147,10 +147,7 @@ if __name__ == '__main__':
 
     # Reboot the device to make sure we get an up to date generator value, then read it out.
     print(colored('\n[3/4] Getting generator', attrs=['bold']))
-    print('Rebooting device')
-    run_process('idevicediagnostics', 'restart')
-    wait_for_device(mode='normal')
-    generator = mobilegestalt_read_bytes('BootNonce', 'little')
+    generator = mobilegestalt_read_bytes('ApNonceRetrieve', 'little')
     if generator:
         print(colored(f"Generator = {colored('0x' + generator.zfill(16), attrs=['bold'])}", 'green'))
     else:
