@@ -64,27 +64,23 @@ def wait_for_device(mode: str) -> None:
 def mobilegestalt_read_int(key: str) -> Optional[str]:
     """Read an integer from MobileGestalt and return it as a hex string."""
 
-    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
+    value = run_process('ideviceinfo', '-k', key).encode('utf-8')
 
-    try:
-        value = plist['MobileGestalt'][key]
-    except KeyError:
-        return None
+    if value:
+        return '{:X}'.format(int(value))
     else:
-        return '{:X}'.format(value)
+        return None
 
 
 def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
     """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
 
-    plist = plistlib.loads(run_process('idevicediagnostics', 'mobilegestalt', key).encode('utf-8'))
+    value = base64.b64decode(run_process('ideviceinfo', '-k', key).encode('utf-8'))
 
-    try:
-        value = plist['MobileGestalt'][key]
-    except KeyError:
-        return None
-    else:
+    if value:
         return '{:x}'.format(int.from_bytes(value, endianness))
+    else:
+        return None
 
 
 def pad_apnonce(apnonce: str) -> str:
@@ -136,7 +132,7 @@ def get_recovery_apnonce(old_apnonce) -> str:
 
 if __name__ == '__main__':
     os.environ['PATH'] = os.pathsep.join(['.', os.environ['PATH']])
-    for binary in ['idevice_id', 'idevicediagnostics', 'irecovery']:
+    for binary in ['idevice_id', 'idevicediagnostics', 'ideviceinfo', 'irecovery']:
         if not shutil.which(binary):
             print(colored(f'ERROR: {binary} not found. Please place the binary in your PATH or the same folder as the script and try again.', 'red'))
             sys.exit(1)
