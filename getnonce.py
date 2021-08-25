@@ -9,7 +9,6 @@ import signal
 import subprocess
 import sys
 import time
-from typing import Optional
 
 try:
     from termcolor import colored
@@ -26,7 +25,7 @@ def finish():
     input()
 
 
-def run_process(command: str, *args: str, silence_errors: bool = False, timeout: Optional[int] = None) -> Optional[str]:
+def run_process(command, *args, silence_errors=False, timeout=None):
     """Run a command with the specified arguments."""
     try:
         p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout)
@@ -43,7 +42,7 @@ def run_process(command: str, *args: str, silence_errors: bool = False, timeout:
     return p.stdout.strip()
 
 
-def wait_for_device(mode: str) -> None:
+def wait_for_device(mode):
     """Wait for a device to be connected over USB and unlocked."""
 
     if mode == 'normal':
@@ -61,7 +60,7 @@ def wait_for_device(mode: str) -> None:
     print()
 
 
-def mobilegestalt_read_int(key: str) -> Optional[str]:
+def mobilegestalt_read_int(key):
     """Read an integer from MobileGestalt and return it as a hex string."""
 
     value = run_process('ideviceinfo', '-k', key).encode('utf-8')
@@ -72,7 +71,7 @@ def mobilegestalt_read_int(key: str) -> Optional[str]:
         return None
 
 
-def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
+def mobilegestalt_read_bytes(key, endianness):
     """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
 
     value = base64.b64decode(run_process('ideviceinfo', '-k', key).encode('utf-8'))
@@ -83,7 +82,7 @@ def mobilegestalt_read_bytes(key: str, endianness: str) -> Optional[str]:
         return None
 
 
-def pad_apnonce(apnonce: str) -> str:
+def pad_apnonce(apnonce):
     """Pad an ApNonce to 64 characters (A10 and above) or 40 characters (A9 and below)."""
 
     padded = apnonce.zfill(64)
@@ -94,7 +93,7 @@ def pad_apnonce(apnonce: str) -> str:
         return padded
 
 
-def get_recovery_apnonce(old_apnonce) -> str:
+def get_recovery_apnonce(old_apnonce):
     """Read the ApNonce in recovery mode."""
 
     apnonce = None
