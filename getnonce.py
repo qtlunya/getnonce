@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import atexit
-import base64
 import os
 import plistlib
 import shutil
@@ -28,7 +27,9 @@ def finish():
 def run_process(command, *args, silence_errors=False, timeout=None):
     """Run a command with the specified arguments."""
     try:
-        p = subprocess.run([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout)
+        p = subprocess.run(
+            [command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='utf-8', timeout=timeout,
+        )
     except subprocess.TimeoutExpired:
         return None
 
@@ -133,7 +134,8 @@ if __name__ == '__main__':
     os.environ['PATH'] = os.pathsep.join(['.', os.environ['PATH']])
     for binary in ['idevice_id', 'idevicediagnostics', 'ideviceinfo', 'irecovery']:
         if not shutil.which(binary):
-            print(colored(f'ERROR: {binary} not found. Please place the binary in your PATH or the same folder as the script and try again.', 'red'))
+            print(colored(f'ERROR: {binary} not found. Please place the binary in your PATH or the same folder as the '
+                          f'script and try again.', 'red'))
             sys.exit(1)
 
     answer = input('Is your device jailbroken? [y/n] ')
