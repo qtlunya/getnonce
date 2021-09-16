@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import atexit
+import base64
 import os
-import plistlib
 import shutil
 import signal
 import subprocess
