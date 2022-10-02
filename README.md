@@ -1,5 +1,5 @@
 # getnonce
 
-Get an apnonce/generator pair from any arm64/arm64e iDevice. No jailbreak required.
+Get an apnonce/generator pair from any\* iDevice (including A12+) without jailbreak
 
-Tested on A11 and A14.
+<sup>\* May not work on really old devices, but you only really need this on A12+ anyway.</sup>
