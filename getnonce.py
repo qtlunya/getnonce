@@ -3,6 +3,7 @@
 import atexit
 import base64
 import os
+import plistlib
 import shutil
 import signal
 import subprocess
@@ -70,17 +71,22 @@ def lockdownd_read_int(key):
     return int(value) if value else None
 
 
+def _format_bytes(value, endianness):
+    return "{:x}".format(int.from_bytes(value, endianness)) if value else None
 
 
 def lockdownd_read_bytes(key, endianness):
     """Read bytes with the specified endianness from lockdownd and return it as a hex string."""
 
     value = base64.b64decode(run_process("ideviceinfo", "-k", key).encode())
+    return _format_bytes(value, endianness)
 
-    if value:
-        return "{:x}".format(int.from_bytes(value, endianness))
-    else:
-        return None
+
+def mobilegestalt_read_bytes(key, endianness):
+    """Read bytes with the specified endianness from MobileGestalt and return it as a hex string."""
+
+    value = plistlib.loads(run_process("idevicediagnostics", "mobilegestalt", key).encode())["MobileGestalt"][key]
+    return _format_bytes(value, endianness)
 
 
 def pad_apnonce(apnonce):
@@ -167,12 +173,18 @@ if __name__ == "__main__":
             print("[red]ERROR: Unable to read ApNonce[/red]")
             sys.exit(1)
 
-    # Reboot the device to make sure we get an up to date generator value, then read it out.
     print("\n[bold]\\[4/5] Getting generator[/bold]")
-    print("Rebooting device")
-    run_process("idevicediagnostics", "restart")
-    wait_for_device(mode="normal")
-    generator = mobilegestalt_read_bytes("BootNonce", "little")
+    cpid = lockdownd_read_int("ChipID")
+    if cpid >= 0x8020:
+        # A12+ device, we can take a shortcut and avoid rebooting
+        # Note: This value is only available via MobileGestalt and not the regular lockdownd interface
+        generator = mobilegestalt_read_bytes("ApNonceRetrieve", "little")
+    else:
+        # A11- device, we must reboot to obtain the up to date generator value
+        print("Rebooting device")
+        run_process("idevicediagnostics", "restart")
+        wait_for_device(mode="normal")
+        generator = lockdownd_read_bytes("BootNonce", "little")
     if generator:
         print(f"[green]Generator = [bold]0x{generator:016}[/bold][/green]")
     else:
