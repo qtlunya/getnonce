@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     print("\n[bold]\\[4/5] Getting generator[/bold]")
     cpid = lockdownd_read_int("ChipID")
-    if 0x8020 <= cpid < 0x8900:
+    if 0x8020 <= cpid < 0x8720:
         # A12+ device, we can take a shortcut and avoid rebooting
         # Note: This value is only available via MobileGestalt and not the regular lockdownd interface
         generator = mobilegestalt_read_bytes("ApNonceRetrieve", "little")
